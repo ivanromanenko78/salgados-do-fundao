@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Salgados do Fundão — Nova apresentação</title>
+<style>
+:root{--cream:#f5ead3;--paper:#fffaf0;--ink:#161616;--red:#c94f36;--green:#426b52;--gold:#d7a94b;--fs:22px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--cream);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:var(--fs);line-height:1.45}
+nav{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 5vw;background:#111;color:#fff}.brand{font-weight:900}.tools{display:flex;gap:8px;flex-wrap:wrap}button{font:inherit;font-weight:800;border:2px solid currentColor;border-radius:999px;padding:8px 14px;background:transparent;color:inherit}button.active{background:#fff;color:#111}
+section{min-height:100vh;padding:8vh 7vw;display:flex;flex-direction:column;justify-content:center;border-bottom:3px solid rgba(0,0,0,.08)}
+h1,h2{margin:0 0 24px;font-weight:900;line-height:.98;max-width:1100px}h1{font-size:clamp(48px,8vw,104px)}h2{font-size:clamp(38px,6vw,72px)}.lead{font-size:clamp(24px,3vw,38px);max-width:980px}.hero{background:linear-gradient(135deg,#fff9ea 0 62%,#e7cc91 62%)}
+.character-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px;margin-top:34px}.character{background:var(--paper);border:4px solid var(--ink);border-radius:28px;padding:24px;box-shadow:10px 10px 0 rgba(0,0,0,.12);text-align:center}.face{font-size:72px}.character b{display:block;font-size:1.25em;margin:8px 0}
+.flow{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:28px}.step{width:min(820px,100%);background:var(--paper);border:4px solid var(--ink);border-radius:26px;padding:22px;text-align:center;font-weight:900;font-size:clamp(24px,3vw,36px);box-shadow:10px 10px 0 rgba(0,0,0,.12)}.arrow{font-size:50px;color:var(--red);font-weight:900;line-height:1}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px;margin-top:28px}.card{background:var(--paper);border:4px solid var(--ink);border-radius:26px;padding:26px}.card b{display:block;font-size:1.3em;margin-bottom:10px}.good{background:#e7f1ea}.warn{background:#f7e0da}.money{font-size:clamp(42px,7vw,82px);font-weight:900}.center{text-align:center}.dark{background:#111;color:#fff}.dark .step,.dark .card{background:#fff;color:#111}.scenario{position:relative;padding-top:38px}.scenario:before{position:absolute;top:-18px;left:22px;background:#111;color:#fff;border-radius:999px;padding:8px 15px;font-weight:900}.s1:before{content:'1'}.s2:before{content:'2'}.s3:before{content:'3'}.result{font-weight:900;margin-top:16px}.small{font-size:.82em;opacity:.8;max-width:1000px}
+@media(max-width:650px){nav{position:relative}section{min-height:auto;padding:56px 22px}.face{font-size:58px}}
+</style>
+</head>
+<body>
+<nav><div class="brand">SALGADOS DO FUNDÃO — NOVA APRESENTAÇÃO</div><div class="tools"><button id="ptBtn" class="active" onclick="setLang('pt')">Português</button><button id="ruBtn" onclick="setLang('ru')">Русский</button><button onclick="zoom(-1)">A−</button><button onclick="zoom(1)">A+</button></div></nav>
+
+<section class="hero">
+<h1 data-pt="Como transformar 450 € num sistema de vendas" data-ru="Как превратить 450 € в систему продаж"></h1>
+<p class="lead" data-pt="Não compramos apenas publicidade. Criamos materiais, uma página de venda, um caminho até ao WhatsApp e medimos o resultado." data-ru="Мы покупаем не просто рекламу. Мы создаём материалы, продающую страницу, путь до WhatsApp и считаем результат."></p>
+<div class="character-row">
+<div class="character"><div class="face">👨‍🍳</div><b data-pt="A empresa" data-ru="Компания"></b><span data-pt="Tem um bom produto, mas precisa de mais clientes." data-ru="Есть хороший продукт, но нужны новые клиенты."></span></div>
+<div class="character"><div class="face">👨‍💻</div><b data-pt="O especialista" data-ru="Специалист"></b><span data-pt="Prepara fotos, vídeos, página, anúncios e relatório." data-ru="Готовит фото, видео, страницу, рекламу и отчёт."></span></div>
+<div class="character"><div class="face">👨‍👩‍👧</div><b data-pt="O cliente" data-ru="Клиент"></b><span data-pt="Vê a oferta, entende o preço e faz o pedido." data-ru="Видит предложение, понимает цену и делает заказ."></span></div>
+</div>
+</section>
+
+<section>
+<h2 data-pt="O caminho do dinheiro" data-ru="Куда идут деньги"></h2>
+<div class="flow">
+<div class="step" data-pt="300 € — trabalho: estratégia, fotos, vídeos, site e redes sociais" data-ru="300 € — работа: стратегия, фото, видео, сайт и соцсети"></div>
+<div class="arrow">↓</div>
+<div class="step" data-pt="150 € — publicidade paga diretamente à Meta" data-ru="150 € — реклама, оплаченная напрямую Meta"></div>
+<div class="arrow">↓</div>
+<div class="step" data-pt="Resultado: pessoas veem → entram no site → escrevem no WhatsApp → fazem pedidos" data-ru="Результат: люди видят → заходят на сайт → пишут в WhatsApp → делают заказы"></div>
+</div>
+</section>
+
+<section>
+<h2 data-pt="O que fica depois de 30 dias" data-ru="Что останется через 30 дней"></h2>
+<div class="grid">
+<div class="card good"><b data-pt="Site pronto" data-ru="Готовый сайт"></b><span data-pt="Continua a trabalhar depois do teste." data-ru="Продолжает работать после теста."></span></div>
+<div class="card good"><b data-pt="20–30 fotografias" data-ru="20–30 фотографий"></b><span data-pt="Para catálogo, site e redes sociais." data-ru="Для каталога, сайта и соцсетей."></span></div>
+<div class="card good"><b data-pt="8 vídeos curtos" data-ru="8 коротких видео"></b><span data-pt="Para Facebook, Instagram e anúncios." data-ru="Для Facebook, Instagram и рекламы."></span></div>
+<div class="card good"><b data-pt="Redes sociais organizadas" data-ru="Оформленные соцсети"></b></div>
+<div class="card good"><b data-pt="Publicidade configurada" data-ru="Настроенная реклама"></b></div>
+<div class="card good"><b data-pt="Relatório com números" data-ru="Отчёт с цифрами"></b><span data-pt="Visualizações, mensagens e pedidos." data-ru="Просмотры, сообщения и заказы."></span></div>
+</div>
+</section>
+
+<section>
+<h2 data-pt="3 resultados possíveis" data-ru="3 возможных результата"></h2>
+<div class="grid">
+<div class="card scenario s1 warn"><div class="face center">🌱</div><b data-pt="Poucos pedidos" data-ru="Мало заказов"></b><span data-pt="Descobrimos que preço, oferta ou mensagem precisam de mudar." data-ru="Понимаем, что надо изменить цену, предложение или сообщение."></span><div class="result" data-pt="Mesmo assim, ficam o site, as fotos, os vídeos e os dados." data-ru="Даже тогда остаются сайт, фото, видео и данные."></div></div>
+<div class="card scenario s2 good"><div class="face center">📈</div><b data-pt="O investimento começa a voltar" data-ru="Вложения начинают возвращаться"></b><span data-pt="Chegam novos pedidos e vemos quais produtos vendem melhor." data-ru="Приходят новые заказы, и видно, какие продукты продаются лучше."></span><div class="result" data-pt="Mantemos o que funciona e melhoramos a campanha." data-ru="Оставляем рабочее и улучшаем кампанию."></div></div>
+<div class="card scenario s3 good"><div class="face center">🚀</div><b data-pt="Resultado forte" data-ru="Сильный результат"></b><span data-pt="Os pedidos cobrem o teste e criam um canal regular de clientes." data-ru="Заказы покрывают тест и создают постоянный канал клиентов."></span><div class="result" data-pt="Aumentamos o orçamento com cuidado e repetimos o sistema." data-ru="Осторожно увеличиваем бюджет и повторяем систему."></div></div>
+</div>
+</section>
+
+<section>
+<h2 data-pt="Quanto custa o primeiro teste" data-ru="Сколько стоит первый тест"></h2>
+<div class="grid center">
+<div class="card"><div class="money">300 €</div><b data-pt="Trabalho completo" data-ru="Вся работа"></b></div>
+<div class="card"><div class="money">150 €</div><b data-pt="Publicidade" data-ru="Реклама"></b></div>
+<div class="card good"><div class="money">450 €</div><b data-pt="Total por 30 dias" data-ru="Всего за 30 дней"></b></div>
+</div>
+<p class="small" data-pt="Não prometemos um número exato de vendas. Testamos o mercado, medimos e mostramos o resultado real." data-ru="Мы не обещаем точное число продаж. Мы проверяем рынок, измеряем и показываем реальный результат."></p>
+</section>
+
+<section class="dark">
+<h2 data-pt="Como trabalhamos a seguir" data-ru="Как работаем дальше"></h2>
+<div class="flow">
+<div class="step" data-pt="1. Aprovamos o teste de 30 dias" data-ru="1. Утверждаем тест на 30 дней"></div><div class="arrow">↓</div>
+<div class="step" data-pt="2. Escolhemos produtos, preços e entrega" data-ru="2. Выбираем продукты, цены и доставку"></div><div class="arrow">↓</div>
+<div class="step" data-pt="3. Fazemos fotos, vídeos e a nova página" data-ru="3. Делаем фото, видео и новую страницу"></div><div class="arrow">↓</div>
+<div class="step" data-pt="4. Lançamos publicações e publicidade" data-ru="4. Запускаем публикации и рекламу"></div><div class="arrow">↓</div>
+<div class="step" data-pt="5. Registamos mensagens e pedidos" data-ru="5. Записываем сообщения и заказы"></div><div class="arrow">↓</div>
+<div class="step" data-pt="6. Após 30 dias, decidimos o próximo passo" data-ru="6. Через 30 дней решаем, что делать дальше"></div>
+</div>
+</section>
+<script>
+let lang='pt',size=22;function setLang(l){lang=l;document.documentElement.lang=l;document.querySelectorAll('[data-pt]').forEach(e=>e.textContent=e.dataset[l]);ptBtn.classList.toggle('active',l==='pt');ruBtn.classList.toggle('active',l==='ru')}function zoom(d){size=Math.max(18,Math.min(34,size+d*2));document.documentElement.style.setProperty('--fs',size+'px')}setLang('pt');
+</script>
+</body>
+</html>
