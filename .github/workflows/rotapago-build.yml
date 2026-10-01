@@ -40,6 +40,7 @@ jobs:
         run: |
           mkdir -p android/RotaPagoFinance/app/src/main/java/com/ivan/rotapago
           cat android/RotaPagoFinance/source_parts/MainActivity.b64.* | tr -d '\n\r ' | base64 -d > android/RotaPagoFinance/app/src/main/java/com/ivan/rotapago/MainActivity.java
+          sed -i 's/box.addView(text("Название"));/box.addView(label("Название"));/' android/RotaPagoFinance/app/src/main/java/com/ivan/rotapago/MainActivity.java
 
       - name: Build debug APK
         run: gradle -p android/RotaPagoFinance :app:assembleDebug --stacktrace
