@@ -6,15 +6,6 @@ android {
     namespace 'com.ivan.rotapago'
     compileSdk 35
 
-    signingConfigs {
-        debug {
-            storeFile file('../rotapago-update.keystore')
-            storePassword 'RotaPago2026'
-            keyAlias 'rotapago'
-            keyPassword 'RotaPago2026'
-        }
-    }
-
     defaultConfig {
         applicationId 'com.ivan.rotapago.finance2'
         minSdk 23
@@ -24,12 +15,8 @@ android {
     }
 
     buildTypes {
-        debug {
-            signingConfig signingConfigs.debug
-        }
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
