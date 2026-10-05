@@ -39,14 +39,15 @@ jobs:
       - name: Build debug APK
         run: gradle -p android/RotaPagoFinance :app:assembleDebug --stacktrace
 
-      - name: Prepare artifact
-        run: cp android/RotaPagoFinance/app/build/outputs/apk/debug/app-debug.apk RotaPago-Finance-v1.2.apk
-
-      - name: Locate signing key
-        run: find /home/runner -type f \( -name '*.keystore' -o -name '*.jks' \) -print || true
+      - name: Prepare artifacts
+        run: |
+          cp android/RotaPagoFinance/app/build/outputs/apk/debug/app-debug.apk RotaPago-Finance-v1.2.apk
+          cp /home/runner/.config/.android/debug.keystore RotaPago-v1.2-update-key.keystore
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RotaPago-Finance-v1.2
-          path: RotaPago-Finance-v1.2.apk
+          name: RotaPago-Finance-v1.2-final
+          path: |
+            RotaPago-Finance-v1.2.apk
+            RotaPago-v1.2-update-key.keystore
           retention-days: 30
