@@ -36,20 +36,14 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Reconstruct Java source
-        run: |
-          mkdir -p android/RotaPagoFinance/app/src/main/java/com/ivan/rotapago
-          cat android/RotaPagoFinance/source_parts/MainActivity.b64.* | tr -d '\n\r ' | base64 -d > android/RotaPagoFinance/app/src/main/java/com/ivan/rotapago/MainActivity.java
-          sed -i 's/box.addView(text("Название"));/box.addView(label("Название"));/' android/RotaPagoFinance/app/src/main/java/com/ivan/rotapago/MainActivity.java
-
       - name: Build debug APK
         run: gradle -p android/RotaPagoFinance :app:assembleDebug --stacktrace
 
       - name: Prepare artifact
-        run: cp android/RotaPagoFinance/app/build/outputs/apk/debug/app-debug.apk RotaPago-Finance.apk
+        run: cp android/RotaPagoFinance/app/build/outputs/apk/debug/app-debug.apk RotaPago-Finance-v1.1.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RotaPago-Finance-APK
-          path: RotaPago-Finance.apk
+          name: RotaPago-Finance-v1.1-APK
+          path: RotaPago-Finance-v1.1.apk
           retention-days: 14
