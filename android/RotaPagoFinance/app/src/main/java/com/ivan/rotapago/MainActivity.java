@@ -38,6 +38,8 @@ import androidx.core.content.FileProvider;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -65,6 +67,15 @@ public class MainActivity extends Activity {
     private int shownYear;
     private int shownMonth;
     private Palette p;
+
+    private static final int RANGE_WEEK = 0;
+    private static final int RANGE_MONTH = 1;
+    private static final int RANGE_3M = 2;
+    private static final int RANGE_6M = 3;
+    private static final int RANGE_YEAR = 4;
+    private static final int REQUEST_IMPORT_DB = 4102;
+    private int analyticsRange = RANGE_MONTH;
+    private final Calendar analyticsAnchor = Calendar.getInstance();
 
     private final DecimalFormat money = new DecimalFormat("#,##0.00", DecimalFormatSymbols.getInstance(Locale.US));
 
@@ -344,6 +355,7 @@ public class MainActivity extends Activity {
         Button back = button("‹", p.surface2, p.text, 28, 14);
         back.setOnClickListener(v -> renderDashboard());
         header.addView(back, fixed(dp(54), dp(54)));
+
         LinearLayout titles = vCol();
         titles.setPadding(dp(12), 0, 0, 0);
         titles.addView(text("Аналитика", 30, p.text, true));
@@ -352,51 +364,175 @@ public class MainActivity extends Activity {
         root.addView(header);
 
         root.addView(spacer(14));
-        root.addView(buildMonthNavigationAnalytics());
+        root.addView(buildRangeSelector());
+        root.addView(spacer(10));
+        root.addView(buildAnalyticsNavigation());
         root.addView(spacer(14));
 
-        MonthPoint[] six = db.lastMonths(shownYear, shownMonth, 6);
-        double[] totals = db.monthTotals(shownYear, shownMonth);
+        PeriodSpec period = currentAnalyticsPeriod();
+        MonthPoint[] points = (analyticsRange == RANGE_WEEK || analyticsRange == RANGE_MONTH)
+                ? db.dailyPoints(period.start, period.end)
+                : db.monthlyPoints(period.start, period.end);
+
+        double[] totals = db.totalsBetween(period.start, period.end);
         double net = totals[0] - totals[1];
 
         LinearLayout kpi = hRow();
         kpi.addView(kpiCard("Доходы", formatMoneyPlain(totals[0]), p.income), weightMargin(1f, 0, 5));
         kpi.addView(kpiCard("Расходы", formatMoneyPlain(totals[1]), p.expense), weightMargin(1f, 5, 5));
-        kpi.addView(kpiCard("Итог", (net >= 0 ? "+" : "-") + formatMoneyPlain(Math.abs(net)), net >= 0 ? p.income : p.expense), weightMargin(1f, 5, 0));
+        kpi.addView(kpiCard("Итог", (net >= 0 ? "+" : "-") + formatMoneyPlain(Math.abs(net)),
+                net >= 0 ? p.income : p.expense), weightMargin(1f, 5, 0));
         root.addView(kpi);
 
         root.addView(spacer(14));
-        root.addView(chartCard("Доходы и расходы за 6 месяцев",
-                new FinanceChartView(this, FinanceChartView.MODE_BARS, six, null, p)));
+        root.addView(chartCard("Доходы и расходы · " + period.shortLabel,
+                new FinanceChartView(this, FinanceChartView.MODE_BARS, points, null, p)));
         root.addView(spacer(12));
-        root.addView(chartCard("Динамика результата по месяцам",
-                new FinanceChartView(this, FinanceChartView.MODE_LINE, six, null, p)));
+        root.addView(chartCard("Динамика чистого результата",
+                new FinanceChartView(this, FinanceChartView.MODE_LINE, points, null, p)));
         root.addView(spacer(12));
 
-        List<CategoryTotal> expenses = db.categoryTotals(shownYear, shownMonth, "expense");
-        root.addView(chartCard("Структура расходов · " + MONTHS[shownMonth],
+        List<CategoryTotal> expenses = db.categoryTotalsBetween(period.start, period.end, "expense");
+        root.addView(chartCard("Структура расходов · " + period.shortLabel,
                 new FinanceChartView(this, FinanceChartView.MODE_PIE, null, expenses, p)));
 
         root.addView(spacer(12));
-        root.addView(buildAnalyticsDetails());
+        root.addView(buildAnalyticsDetails(period, totals));
 
         setContentView(scroll);
     }
 
-    private View buildMonthNavigationAnalytics() {
+    private View buildRangeSelector() {
+        LinearLayout outer = vCol();
+        TextView caption = text("Период", 13, p.muted, true);
+        caption.setPadding(dp(2), 0, 0, dp(6));
+        outer.addView(caption);
+
+        LinearLayout row = hRow();
+        String[] labels = {"Неделя", "Месяц", "3 мес.", "6 мес.", "Год"};
+        int[] ranges = {RANGE_WEEK, RANGE_MONTH, RANGE_3M, RANGE_6M, RANGE_YEAR};
+
+        for (int i = 0; i < labels.length; i++) {
+            boolean active = analyticsRange == ranges[i];
+            Button b = button(labels[i], active ? p.primary : p.surface2, active ? Color.WHITE : p.text, 13, 14);
+            final int r = ranges[i];
+            b.setOnClickListener(v -> {
+                analyticsRange = r;
+                renderAnalytics();
+            });
+            LinearLayout.LayoutParams lp = weighted(1f);
+            if (i > 0) lp.setMargins(dp(3), 0, 0, 0);
+            row.addView(b, lp);
+        }
+        outer.addView(row, fixed(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)));
+        return outer;
+    }
+
+    private View buildAnalyticsNavigation() {
         LinearLayout row = hRow();
         row.setGravity(Gravity.CENTER_VERTICAL);
+
         Button left = button("‹", p.surface2, p.text, 26, 14);
         Button right = button("›", p.surface2, p.text, 26, 14);
-        TextView label = text(MONTHS[shownMonth] + " " + shownYear, 20, p.text, true);
+        PeriodSpec period = currentAnalyticsPeriod();
+        TextView label = text(period.label, 18, p.text, true);
         label.setGravity(Gravity.CENTER);
-        left.setOnClickListener(v -> { changeMonthOnly(-1); renderAnalytics(); });
-        right.setOnClickListener(v -> { changeMonthOnly(1); renderAnalytics(); });
-        label.setOnClickListener(v -> pickMonthForAnalytics());
+
+        left.setOnClickListener(v -> {
+            shiftAnalyticsPeriod(-1);
+            renderAnalytics();
+        });
+        right.setOnClickListener(v -> {
+            shiftAnalyticsPeriod(1);
+            renderAnalytics();
+        });
+
         row.addView(left, fixed(dp(54), dp(54)));
-        row.addView(label, weighted(1f));
+        LinearLayout.LayoutParams center = weighted(1f);
+        center.setMargins(dp(8), 0, dp(8), 0);
+        row.addView(label, center);
         row.addView(right, fixed(dp(54), dp(54)));
         return row;
+    }
+
+    private void shiftAnalyticsPeriod(int direction) {
+        if (analyticsRange == RANGE_WEEK) analyticsAnchor.add(Calendar.DAY_OF_MONTH, 7 * direction);
+        else if (analyticsRange == RANGE_MONTH) analyticsAnchor.add(Calendar.MONTH, direction);
+        else if (analyticsRange == RANGE_3M) analyticsAnchor.add(Calendar.MONTH, 3 * direction);
+        else if (analyticsRange == RANGE_6M) analyticsAnchor.add(Calendar.MONTH, 6 * direction);
+        else analyticsAnchor.add(Calendar.YEAR, direction);
+    }
+
+    private PeriodSpec currentAnalyticsPeriod() {
+        Calendar start = (Calendar) analyticsAnchor.clone();
+        Calendar end = (Calendar) analyticsAnchor.clone();
+        clearClock(start);
+        clearClock(end);
+
+        String label;
+        String shortLabel;
+
+        if (analyticsRange == RANGE_WEEK) {
+            int dow = start.get(Calendar.DAY_OF_WEEK);
+            int delta = dow == Calendar.SUNDAY ? -6 : Calendar.MONDAY - dow;
+            start.add(Calendar.DAY_OF_MONTH, delta);
+            end = (Calendar) start.clone();
+            end.add(Calendar.DAY_OF_MONTH, 7);
+
+            Calendar last = (Calendar) end.clone();
+            last.add(Calendar.DAY_OF_MONTH, -1);
+            label = rangeDateLabel(start, last);
+            shortLabel = "неделя";
+        } else if (analyticsRange == RANGE_MONTH) {
+            start.set(Calendar.DAY_OF_MONTH, 1);
+            end = (Calendar) start.clone();
+            end.add(Calendar.MONTH, 1);
+            label = MONTHS[start.get(Calendar.MONTH)] + " " + start.get(Calendar.YEAR);
+            shortLabel = "месяц";
+        } else if (analyticsRange == RANGE_3M || analyticsRange == RANGE_6M) {
+            int months = analyticsRange == RANGE_3M ? 3 : 6;
+            start.set(Calendar.DAY_OF_MONTH, 1);
+            start.add(Calendar.MONTH, -(months - 1));
+            end = (Calendar) analyticsAnchor.clone();
+            clearClock(end);
+            end.set(Calendar.DAY_OF_MONTH, 1);
+            end.add(Calendar.MONTH, 1);
+
+            Calendar last = (Calendar) end.clone();
+            last.add(Calendar.DAY_OF_MONTH, -1);
+            label = MONTHS_SHORT[start.get(Calendar.MONTH)] + " " + start.get(Calendar.YEAR)
+                    + " — " + MONTHS_SHORT[last.get(Calendar.MONTH)] + " " + last.get(Calendar.YEAR);
+            shortLabel = months + " мес.";
+        } else {
+            start.set(Calendar.MONTH, Calendar.JANUARY);
+            start.set(Calendar.DAY_OF_MONTH, 1);
+            end = (Calendar) start.clone();
+            end.add(Calendar.YEAR, 1);
+            label = String.valueOf(start.get(Calendar.YEAR));
+            shortLabel = "год";
+        }
+
+        int days = Math.max(1, daysBetween(start, end));
+        return new PeriodSpec(isoDate(start), isoDate(end), label, shortLabel, days);
+    }
+
+    private String rangeDateLabel(Calendar a, Calendar b) {
+        return String.format(Locale.getDefault(), "%02d %s — %02d %s %d",
+                a.get(Calendar.DAY_OF_MONTH), MONTHS_SHORT[a.get(Calendar.MONTH)],
+                b.get(Calendar.DAY_OF_MONTH), MONTHS_SHORT[b.get(Calendar.MONTH)],
+                b.get(Calendar.YEAR));
+    }
+
+    private int daysBetween(Calendar start, Calendar end) {
+        long diff = end.getTimeInMillis() - start.getTimeInMillis();
+        return (int)Math.max(1, diff / (24L * 60L * 60L * 1000L));
+    }
+
+    private void clearClock(Calendar c) {
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
     }
 
     private View kpiCard(String label, String value, int accent) {
@@ -418,7 +554,8 @@ public class MainActivity extends Activity {
         card.setPadding(dp(16), dp(14), dp(16), dp(14));
         card.addView(text(title, 18, p.text, true));
         TextView hint = text(chart.mode == FinanceChartView.MODE_PIE ? "Доля категорий" :
-                chart.mode == FinanceChartView.MODE_LINE ? "Чистый итог: доходы минус расходы" : "Зелёный — доходы · красный — расходы",
+                chart.mode == FinanceChartView.MODE_LINE ? "Линия выше центра — плюс, ниже — минус" :
+                        "Зелёный — доходы · красный — расходы",
                 13, p.muted, false);
         hint.setPadding(0, dp(3), 0, dp(8));
         card.addView(hint);
@@ -426,15 +563,14 @@ public class MainActivity extends Activity {
         return card;
     }
 
-    private View buildAnalyticsDetails() {
+    private View buildAnalyticsDetails(PeriodSpec period, double[] totals) {
         LinearLayout card = card(p.surface, 22);
         card.setPadding(dp(16), dp(14), dp(16), dp(14));
         card.addView(text("Ключевые показатели", 18, p.text, true));
 
-        double[] totals = db.monthTotals(shownYear, shownMonth);
-        double avg = totals[1] / daysInMonth(shownYear, shownMonth);
-        Tx biggest = db.biggestTransaction(shownYear, shownMonth, "expense");
-        Tx biggestIncome = db.biggestTransaction(shownYear, shownMonth, "income");
+        double avg = totals[1] / period.days;
+        Tx biggest = db.biggestTransactionBetween(period.start, period.end, "expense");
+        Tx biggestIncome = db.biggestTransactionBetween(period.start, period.end, "income");
 
         card.addView(metricRow("Средний расход в день", formatMoneyPlain(avg)));
         card.addView(metricRow("Самая большая трата",
@@ -442,7 +578,7 @@ public class MainActivity extends Activity {
         card.addView(metricRow("Самый большой доход",
                 biggestIncome == null ? "—" : biggestIncome.category + " · " + formatMoneyPlain(biggestIncome.amount)));
 
-        List<CategoryTotal> cats = db.categoryTotals(shownYear, shownMonth, "expense");
+        List<CategoryTotal> cats = db.categoryTotalsBetween(period.start, period.end, "expense");
         if (!cats.isEmpty()) card.addView(metricRow("Главная категория расходов",
                 cats.get(0).category + " · " + formatMoneyPlain(cats.get(0).total)));
         return card;
@@ -719,17 +855,99 @@ public class MainActivity extends Activity {
                 "Текущий месяц → Google Таблицы",
                 "Все операции → Google Таблицы",
                 "Текущий месяц → поделиться CSV",
-                "Все операции → поделиться CSV"
+                "Все операции → поделиться CSV",
+                "Создать резервную копию базы",
+                "Импортировать резервную базу"
         };
         new AlertDialog.Builder(this, dark ? AlertDialog.THEME_DEVICE_DEFAULT_DARK : AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
-                .setTitle("Экспорт данных")
+                .setTitle("Экспорт и резервная копия")
                 .setItems(items, (d, which) -> {
-                    boolean all = which == 1 || which == 3;
-                    boolean preferSheets = which == 0 || which == 1;
-                    exportCsv(all, preferSheets);
+                    if (which <= 3) {
+                        boolean all = which == 1 || which == 3;
+                        boolean preferSheets = which == 0 || which == 1;
+                        exportCsv(all, preferSheets);
+                    } else if (which == 4) {
+                        exportDatabaseBackup();
+                    } else {
+                        chooseDatabaseBackup();
+                    }
                 })
                 .setNegativeButton("Отмена", null)
                 .show();
+    }
+
+    private void exportDatabaseBackup() {
+        try {
+            db.getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
+            db.close();
+
+            File src = getDatabasePath("rotapago_finance.db");
+            File dir = new File(getCacheDir(), "exports");
+            if (!dir.exists()) dir.mkdirs();
+            File out = new File(dir, "RotaPago-backup.db");
+            copyFile(src, out);
+            db = new Db(this);
+
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", out);
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("application/octet-stream");
+            send.putExtra(Intent.EXTRA_STREAM, uri);
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(send, "Сохранить резервную копию"));
+        } catch (Exception e) {
+            db = new Db(this);
+            toast("Ошибка резервной копии: " + e.getMessage());
+        }
+    }
+
+    private void chooseDatabaseBackup() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.setType("*/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(intent, REQUEST_IMPORT_DB);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_IMPORT_DB || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+
+        Uri uri = data.getData();
+        new AlertDialog.Builder(this, dark ? AlertDialog.THEME_DEVICE_DEFAULT_DARK : AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
+                .setTitle("Импортировать данные?")
+                .setMessage("Операции и категории из резервной базы будут добавлены в приложение. Текущие данные не удаляются.")
+                .setNegativeButton("Отмена", null)
+                .setPositiveButton("Импортировать", (d, w) -> importDatabaseUri(uri))
+                .show();
+    }
+
+    private void importDatabaseUri(Uri uri) {
+        try {
+            File temp = new File(getCacheDir(), "import-rotapago.db");
+            try (InputStream in = getContentResolver().openInputStream(uri);
+                 FileOutputStream out = new FileOutputStream(temp)) {
+                if (in == null) throw new Exception("Файл не открыт");
+                byte[] buffer = new byte[8192];
+                int n;
+                while ((n = in.read(buffer)) > 0) out.write(buffer, 0, n);
+            }
+
+            int imported = db.importFromDatabase(temp);
+            temp.delete();
+            toast("Импортировано операций: " + imported);
+            renderDashboard();
+        } catch (Exception e) {
+            toast("Не удалось импортировать базу: " + e.getMessage());
+        }
+    }
+
+    private void copyFile(File src, File dst) throws Exception {
+        try (FileInputStream in = new FileInputStream(src);
+             FileOutputStream out = new FileOutputStream(dst)) {
+            byte[] buffer = new byte[8192];
+            int n;
+            while ((n = in.read(buffer)) > 0) out.write(buffer, 0, n);
+        }
     }
 
     private void exportCsv(boolean all, boolean preferSheets) {
@@ -1033,6 +1251,18 @@ public class MainActivity extends Activity {
         return c.getActualMaximum(Calendar.DAY_OF_MONTH);
     }
 
+    private static class PeriodSpec {
+        String start, end, label, shortLabel;
+        int days;
+        PeriodSpec(String start, String end, String label, String shortLabel, int days) {
+            this.start = start;
+            this.end = end;
+            this.label = label;
+            this.shortLabel = shortLabel;
+            this.days = days;
+        }
+    }
+
     private static class Tx {
         long id;
         String type;
@@ -1215,6 +1445,124 @@ public class MainActivity extends Activity {
             getWritableDatabase().delete("categories", "type=? AND name=?", new String[]{type, name});
         }
 
+        double[] totalsBetween(String start, String end) {
+            double income = 0, expense = 0;
+            Cursor c = getReadableDatabase().rawQuery(
+                    "SELECT type,COALESCE(SUM(amount),0) FROM transactions WHERE date>=? AND date<? GROUP BY type",
+                    new String[]{start, end});
+            while (c.moveToNext()) {
+                if ("income".equals(c.getString(0))) income = c.getDouble(1);
+                else if ("expense".equals(c.getString(0))) expense = c.getDouble(1);
+            }
+            c.close();
+            return new double[]{income, expense};
+        }
+
+        List<CategoryTotal> categoryTotalsBetween(String start, String end, String type) {
+            Cursor c = getReadableDatabase().rawQuery(
+                    "SELECT category,SUM(amount) total FROM transactions WHERE type=? AND date>=? AND date<? GROUP BY category ORDER BY total DESC",
+                    new String[]{type, start, end});
+            ArrayList<CategoryTotal> out = new ArrayList<>();
+            while (c.moveToNext()) out.add(new CategoryTotal(c.getString(0), c.getDouble(1)));
+            c.close();
+            return out;
+        }
+
+        Tx biggestTransactionBetween(String start, String end, String type) {
+            Cursor c = getReadableDatabase().rawQuery(
+                    "SELECT id,type,amount,category,note,date FROM transactions WHERE type=? AND date>=? AND date<? ORDER BY amount DESC LIMIT 1",
+                    new String[]{type, start, end});
+            Tx t = null;
+            if (c.moveToFirst()) t = readTx(c);
+            c.close();
+            return t;
+        }
+
+        MonthPoint[] dailyPoints(String start, String end) {
+            Calendar a = parseIso(start);
+            Calendar b = parseIso(end);
+            ArrayList<MonthPoint> out = new ArrayList<>();
+            Calendar cur = (Calendar)a.clone();
+            while (cur.before(b)) {
+                String day = iso(cur);
+                Calendar next = (Calendar)cur.clone();
+                next.add(Calendar.DAY_OF_MONTH, 1);
+                double[] totals = totalsBetween(day, iso(next));
+                String label = String.valueOf(cur.get(Calendar.DAY_OF_MONTH));
+                out.add(new MonthPoint(label, totals[0], totals[1]));
+                cur = next;
+            }
+            return out.toArray(new MonthPoint[0]);
+        }
+
+        MonthPoint[] monthlyPoints(String start, String end) {
+            Calendar a = parseIso(start);
+            Calendar b = parseIso(end);
+            a.set(Calendar.DAY_OF_MONTH, 1);
+            ArrayList<MonthPoint> out = new ArrayList<>();
+            String[] shortRu = {"янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"};
+            while (a.before(b)) {
+                Calendar next = (Calendar)a.clone();
+                next.add(Calendar.MONTH, 1);
+                double[] totals = totalsBetween(iso(a), iso(next));
+                out.add(new MonthPoint(shortRu[a.get(Calendar.MONTH)], totals[0], totals[1]));
+                a = next;
+            }
+            return out.toArray(new MonthPoint[0]);
+        }
+
+        int importFromDatabase(File file) throws Exception {
+            SQLiteDatabase source = SQLiteDatabase.openDatabase(file.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+            int imported = 0;
+            getWritableDatabase().beginTransaction();
+            try {
+                Cursor c = source.rawQuery("SELECT type,amount,category,note,date,created_at FROM transactions ORDER BY id", null);
+                while (c.moveToNext()) {
+                    ContentValues cv = new ContentValues();
+                    cv.put("type", c.getString(0));
+                    cv.put("amount", c.getDouble(1));
+                    cv.put("category", c.getString(2));
+                    cv.put("note", c.getString(3));
+                    cv.put("date", c.getString(4));
+                    cv.put("created_at", c.getLong(5));
+                    getWritableDatabase().insert("transactions", null, cv);
+                    imported++;
+                }
+                c.close();
+
+                try {
+                    Cursor cats = source.rawQuery("SELECT type,name,sort_order FROM categories ORDER BY id", null);
+                    while (cats.moveToNext()) {
+                        ContentValues cv = new ContentValues();
+                        cv.put("type", cats.getString(0));
+                        cv.put("name", cats.getString(1));
+                        cv.put("sort_order", cats.getInt(2));
+                        getWritableDatabase().insertWithOnConflict("categories", null, cv, SQLiteDatabase.CONFLICT_IGNORE);
+                    }
+                    cats.close();
+                } catch (Exception ignored) {}
+
+                getWritableDatabase().setTransactionSuccessful();
+            } finally {
+                getWritableDatabase().endTransaction();
+                source.close();
+            }
+            return imported;
+        }
+
+        private static Calendar parseIso(String iso) {
+            Calendar c = Calendar.getInstance();
+            c.clear();
+            String[] x = iso.split("-");
+            c.set(Integer.parseInt(x[0]), Integer.parseInt(x[1]) - 1, Integer.parseInt(x[2]));
+            return c;
+        }
+
+        private static String iso(Calendar c) {
+            return String.format(Locale.US, "%04d-%02d-%02d",
+                    c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH));
+        }
+
         List<CategoryTotal> categoryTotals(int year, int month, String type) {
             String start = monthStart(year, month);
             String end = nextMonthStart(year, month);
@@ -1326,7 +1674,9 @@ public class MainActivity extends Activity {
                 paint.setColor(p.expense);
                 c.drawRoundRect(cx + 2, bottom - eh, cx + barW + 2, bottom, 10, 10, paint);
 
-                drawLabel(c, m.label, cx, h - 10, p.muted, 12, Paint.Align.CENTER);
+                if (months.length <= 12 || i == 0 || i == months.length - 1 || i % 5 == 0) {
+                    drawLabel(c, m.label, cx, h - 10, p.muted, 12, Paint.Align.CENTER);
+                }
             }
         }
 
@@ -1353,7 +1703,9 @@ public class MainActivity extends Activity {
 
                 paint.setColor(net >= 0 ? p.income : p.expense);
                 c.drawCircle(x, y, 7, paint);
-                drawLabel(c, m.label, x, h - 10, p.muted, 12, Paint.Align.CENTER);
+                if (months.length <= 12 || i == 0 || i == months.length - 1 || i % 5 == 0) {
+                    drawLabel(c, m.label, x, h - 10, p.muted, 12, Paint.Align.CENTER);
+                }
             }
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(5);
@@ -1366,7 +1718,7 @@ public class MainActivity extends Activity {
         private void drawPie(Canvas c) {
             float w = getWidth(), h = getHeight();
             if (categories == null || categories.isEmpty()) {
-                drawLabel(c, "Нет расходов за этот месяц", w / 2, h / 2, p.muted, 15, Paint.Align.CENTER);
+                drawLabel(c, "Нет расходов за выбранный период", w / 2, h / 2, p.muted, 15, Paint.Align.CENTER);
                 return;
             }
 
