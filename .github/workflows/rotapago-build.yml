@@ -43,11 +43,17 @@ jobs:
         run: |
           cp android/RotaPagoFinance/app/build/outputs/apk/debug/app-debug.apk RotaPago-Finance-v1.2.apk
           cp /home/runner/.config/.android/debug.keystore RotaPago-v1.2-update-key.keystore
+          mkdir -p migration-kit
+          curl -fsSL https://dl.google.com/android/repository/platform-tools-latest-windows.zip -o /tmp/platform-tools-windows.zip
+          unzip -q /tmp/platform-tools-windows.zip -d migration-kit
+          cp android/RotaPagoFinance/RotaPago_migrate_data.bat migration-kit/RotaPago_migrate_data.bat
+          (cd migration-kit && zip -qr ../RotaPago-Migration-Windows.zip .)
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RotaPago-Finance-v1.2-final
+          name: RotaPago-Finance-v1.2-complete
           path: |
             RotaPago-Finance-v1.2.apk
             RotaPago-v1.2-update-key.keystore
+            RotaPago-Migration-Windows.zip
           retention-days: 30
